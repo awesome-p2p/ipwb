@@ -7,7 +7,7 @@ from flask import Flask
 from flask import Response
 
 app = Flask(__name__)
-
+app.debug = True
 #@app.route("/")
 #def hello():
 #    return "Hello World!"
@@ -20,20 +20,16 @@ IPFS_API = ipfsApi.Client(IP, PORT)
 @app.route('/<path:path>')
 def show_uri(path):
     global IPFS_API
-    (datetime, urir) = path.split('/', 1)
-    print datetime
+    (requestedDatetime, requestedUrir) = path.split('/', 1)
+    
     # show the user profile for that user
-    cdxLine = getCDXLine(surt(path))
-    cdxParts = cdxLine.split(" ", 2)
-    surtURI = cdxParts[0]
-    datetime = cdxParts[1]
-    jObj = json.loads(cdxParts[2])
+    cdxLine = getCDXLines(surt(requestedUrir), requestedDatetime)
+    (surtURI, cdxDatetime, cdxjLine) = cdxLine.split(" ", 2)
+    jObj = json.loads(cdxjLine)
     
     payload = IPFS_API.cat(jObj['payload_digest'])
     header = IPFS_API.cat(jObj['header_digest'])
 
-    #print header
-    #print payload
     hLines = header.split('\n')
     hLines.pop(0)
     
@@ -45,29 +41,42 @@ def show_uri(path):
         k = "X-Archive-Orig-" + k
       resp.headers[k] = v
       
-    
     return resp
 
-def getCDXLine(surtURI):
+def getCDXLines(surtURI, datetime):
   with open('index.cdx', 'r') as cdxFile:
     bsResp = iter_exact(cdxFile, surtURI)
-    cdxLine = bsResp.next()
-    return cdxLine
+    print bsResp
+    cdxLines = []  
+    
+    count = 0
+    while count < 100:
+      count += 1
+
+      cdxl = bsResp.next()
+
+      print cdxl
+      (uriKey, cdxDatetime, cdxjLine) = cdxl.split(" ", 2)
+      if uriKey != surtURI: break
+      cdxLines.push((uriKey, cdxDatetime, cdxjLine))
+      
+    if datetime != '*':
+      minTimeDistance = 99999999
+      for cdxItems in enumerate(cdxLines):
+        print cdxItems
+        timeDistance = abs(int(datetime) - int(cdxDatetime))
+        if timeDistance <  minTimeDistance:
+          minTimeDistance = timeDistance
+        
+    #cdxLine = bsResp.next()
+    
+    
+    #return cdxLine
 
     
 
 if __name__ == "__main__":
     app.run()
-    
-# Read in URI, convert to SURT
-  #surt(uriIn)
-# Get SURTed URI lines in CDXJ
-#  Read CDXJ
-#  Do bin search to find relevant lines
-
-# read IPFS hash from relevant lines (header, payload)
-
-# Fetch IPFS data at hashes
 
 
 if __name__ == '__main__':
